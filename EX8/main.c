@@ -1,58 +1,181 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-
-#define MAX_LINE_LEN 256
-
-
-int is_winning_ticket(int winning_nums[], int numbers[]) {
-    for (int i = 0; i < 7; i++) {
-        for (int j = 0; j < 3; j++) {
-            if (numbers[i] == winning_nums[j]) {
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
-
+#include <time.h>
+ 
 int main() {
-    int winning_nums[3];
-    char line[MAX_LINE_LEN];
-    char current_date[MAX_LINE_LEN] = "Unknown Date"; 
+
     FILE *fp;
-    
-    printf("請輸入中獎號碼三個: ");
-    if (scanf("%d %d %d", &winning_nums[0], &winning_nums[1], &winning_nums[2]) != 3) {
-        printf("輸入格式錯誤，請輸入三個整數。\n");
-        return 1;
+
+    int n;
+
+    int lotto[5][7];
+
+    int i, j, k, repeat;
+
+    time_t now;
+
+    struct tm *t;
+ 
+    srand(2025); // 固定亂數種子
+ 
+    printf("請輸入要購買的樂透組數 (1~5)：");
+
+    scanf("%d", &n);
+
+    if (n < 1 || n > 5) n = 5;
+ 
+
+    fp = fopen("lotto.txt", "w");
+ 
+    time(&now);
+
+    t = localtime(&now);
+
+    fprintf(fp, "========= lotto649 =========\n");
+
+    fprintf(fp, "======= %04d/%02d/%02d %02d:%02d:%02d =======\n",
+
+            t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,
+
+            t->tm_hour, t->tm_min, t->tm_sec);
+ 
+    for (i = 0; i < 5; i++) {
+
+        fprintf(fp, "[%d]: ", i + 1);
+
+        if (i < n) {
+
+            for (j = 0; j < 7; j++) {
+
+                do {
+
+                    lotto[i][j] = rand() % 69 + 1;
+
+                    repeat = 0;
+
+                    for (k = 0; k < j; k++) {
+
+                        if (lotto[i][j] == lotto[i][k])
+
+                            repeat = 1;
+
+                    }
+
+                } while (repeat);
+
+            }
+
+            // 排序
+
+            for (j = 0; j < 6; j++) {
+
+                for (k = j + 1; k < 7; k++) {
+
+                    if (lotto[i][j] > lotto[i][k]) {
+
+                        int tmp = lotto[i][j];
+
+                        lotto[i][j] = lotto[i][k];
+
+                        lotto[i][k] = tmp;
+
+                    }
+
+                }
+
+            }
+
+            for (j = 0; j < 7; j++)
+
+                fprintf(fp, "%02d ", lotto[i][j]);
+
+        } else {
+
+            for (j = 0; j < 7; j++)
+
+                fprintf(fp, "-- ");
+
+        }
+
+        fprintf(fp, "\n");
+
     }
 
-    printf("輸入中獎號碼為: %02d %02d %02d\n", winning_nums[0], winning_nums[1], winning_nums[2]);
-    printf("以下為中獎彩卷:\n");
-    fp = fopen("lotto.txt", "r");
-    if (fp == NULL) {
-        printf("錯誤：無法開啟 lotto.txt (請確認檔案是否存在)\n");
-        return 1;
-    }
-    while (fgets(line, MAX_LINE_LEN, fp) != NULL) {
-        line[strcspn(line, "\r\n")] = 0;
-        if (strstr(line, "= ") != NULL && strstr(line, "lotto649") == NULL && strstr(line, "csie") == NULL) {
-            strcpy(current_date, line); 
-        }
-        if (line[0] == '[') {
-            int id, n[7];
-            if (sscanf(line, "[%d]: %d %d %d %d %d %d %d", 
-                       &id, &n[0], &n[1], &n[2], &n[3], &n[4], &n[5], &n[6]) == 8) {
-                
-                if (is_winning_ticket(winning_nums, n)) {
-                    printf("售出時間: %s\n", current_date); 
-                    printf("%s\n", line);
-                }
-            }
-        }
-    }
+    fprintf(fp, "========= csie@CGU =========\n");
 
     fclose(fp);
+ 
+    printf("已產生 lotto.txt 完成。\n");
+ 
+    int a, b, c;
+
+    int num, found = 0;
+
+    int countA, countB, countC;
+ 
+    printf("輸入三個號碼: ");
+
+    scanf("%d %d %d", &a, &b, &c);
+ 
+    fp = fopen("lotto.txt", "r");
+
+    if (fp != NULL) {
+
+        char line[256];
+ 
+        // 跳過前兩行標題
+
+        fgets(line, sizeof(line), fp);
+
+        fgets(line, sizeof(line), fp);
+ 
+        // 逐行檢查五張彩券
+
+        for (i = 0; i < 5; i++) {
+
+            countA = countB = countC = 0;
+
+            fscanf(fp, "%*[^:]:"); // 略過 [i]:
+ 
+            for (j = 0; j < 7; j++) {
+
+                char token[4];
+
+                if (fscanf(fp, "%s", token) == 1) {
+
+                    if (token[0] != '-') {
+
+                        sscanf(token, "%d", &num);
+
+                        if (num == a) countA = 1;
+
+                        if (num == b) countB = 1;
+
+                        if (num == c) countC = 1;
+
+                    }
+
+                }
+
+            }
+
+            if (countA && countB && countC) {
+
+                found = 1;
+
+                break;
+
+            }
+
+        }
+
+        fclose(fp);
+
+    }
+ 
+    if (found)
+        printf("恭喜中獎! 這三個號碼同時出現在同一張彩券上!\n");
+    else
+        printf("這三個號碼沒有同時出現在同一張彩券上。\n");
     return 0;
 }
